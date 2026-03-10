@@ -1,0 +1,24 @@
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = TetrisinUEFI
+#   MODULE_UNI_FILE                = HelloWorld.uni
+  FILE_GUID                      = 4016388b-fbeb-4398-b986-fb3f1079e7ba
+  MODULE_TYPE                    = UEFI_APPLICATION
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UefiMain
+
+  UEFI_HII_RESOURCE_SECTION      = TRUE
+
+[Sources]
+  TetrisinUEFI.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+
+[LibraryClasses]
+  UefiApplicationEntryPoint
+  UefiLib
+  UefiBootServicesTableLib
+  BaseMemoryLib
+  IoLib
