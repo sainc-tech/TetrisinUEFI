@@ -44,8 +44,6 @@ Just download `TetrisinUEFI.efi` and skip straight to running it.
 
 ## Building
 
-## Building
-
 ### Linux (Fedora / Ubuntu / Debian)
 
 **1. Install dependencies**
