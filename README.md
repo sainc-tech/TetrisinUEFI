@@ -5,6 +5,7 @@ Tetris running directly in UEFI firmware. No OS. No runtime. Just bare metal.
 Built with EDK2, GOP for graphics, and the PC speaker for audio.
 
 ![License](https://img.shields.io/badge/license-GPL--2.0-blue)
+[![YouTube](https://img.shields.io/badge/YouTube-SA.inc-red?logo=youtube)](https://youtube.com/@sainccool123)
 
 ---
 
@@ -152,3 +153,7 @@ This makes the USB itself bootable — plug it in, select it in your BIOS boot m
 GPL-2.0 — see [LICENSE](LICENSE)
 
 Copyright (C) 2026 SA.inc
+
+---
+
+Made by [SA.inc](https://youtube.com/@sainccool123)
