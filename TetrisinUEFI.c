@@ -14,6 +14,7 @@
 #include <Protocol/GraphicsOutput.h>
 #include <Protocol/SimpleTextIn.h>
 #include <Library/IoLib.h>
+#include <Library/BaseLib.h>
 
 // ============================================================
 // TETRIS FOR UEFI
@@ -454,77 +455,72 @@ static VOID SpeakerOff(VOID) {
   IoWrite8(0x61, Val & 0xFC);
 }
 
-// Note frequencies (Hz)
-#define E5  659
+// Note frequencies (Hz) - A minor scale + extras
+#define A3  220
+#define B3  247
+#define C4  262
+#define D4  294
+#define E4  330
+#define F4  349
+#define G4  392
+#define A4  440
 #define B4  494
 #define C5  523
 #define D5  587
-#define A4  440
-#define A5  880
-#define G4  392
-#define F4  349
+#define E5  659
 #define F5  698
 #define G5  784
+#define A5  880
+#define B5  988
+#define C6  1047
+#define D6  1175
+#define E6  1319
+#define GS4 415
+#define GS5 831
 #define R   0
 
 // Korobeiniki - {freq, duration in ms}
 static const UINT32 MELODY[][2] = {
-  {E5,300},{B4,150},{C5,150},{D5,300},{C5,150},{B4,150},
-  {A4,300},{A4,150},{C5,150},{E5,300},{D5,150},{C5,150},
-  {B4,300},{B4,150},{C5,150},{D5,300},{E5,300},
-  {C5,300},{A4,300},{A4,300},{R,150},
-  {D5,300},{D5,150},{F5,150},{A5,300},{G5,150},{F5,150},
-  {E5,300},{C5,150},{E5,300},{D5,150},{C5,150},
-  {B4,300},{B4,150},{C5,150},{D5,300},{E5,300},
-  {C5,300},{A4,300},{A4,300},{R,150},
-  {E5,300},{C5,300},{D5,300},{B4,300},
-  {C5,300},{A4,300},{G4,300},{R,150},
-  {E5,300},{C5,300},{D5,300},{B4,300},
-  {C5,150},{E5,150},{A5,300},{G5,150},{F5,150},
-  {E5,300},{C5,150},{E5,300},{D5,150},{C5,150},
-  {B4,300},{B4,150},{C5,150},{D5,300},{E5,300},
-  {C5,300},{A4,300},{A4,300},{R,0},
+  {E5,357},{B4,178},{C5,178},{D5,357},{C5,178},{B4,178},
+  {A4,357},{A4,178},{C5,178},{E5,357},{D5,178},{C5,178},
+  {B4,357},{B4,178},{C5,178},{D5,357},{E5,357},
+  {C5,357},{A4,357},{A4,357},{R,178},
+  {D5,357},{D5,178},{F5,178},{A5,357},{G5,178},{F5,178},
+  {E5,357},{C5,178},{E5,357},{D5,178},{C5,178},
+  {B4,357},{B4,178},{C5,178},{D5,357},{E5,357},
+  {C5,357},{A4,357},{A4,357},{R,178},
+  {E5,357},{C5,357},{D5,357},{B4,357},
+  {C5,357},{A4,357},{G4,357},{R,178},
+  {E5,357},{C5,357},{D5,357},{B4,357},
+  {C5,178},{E5,178},{A5,357},{G5,178},{F5,178},
+  {E5,357},{C5,178},{E5,357},{D5,178},{C5,178},
+  {B4,357},{B4,178},{C5,178},{D5,357},{E5,357},
+  {C5,357},{A4,357},{A4,357},{R,0},
 };
 
 #define MELODY_COUNT (sizeof(MELODY) / sizeof(MELODY[0]))
 
 static UINT32  MelodyPos     = 0;
 static UINT32  NoteTimeLeft  = 0; // microseconds remaining on current note
-static BOOLEAN NoteGap       = FALSE;
-#define NOTE_GAP_US 30000
 
 static VOID TickMusic(UINT32 ElapsedUs) {
-  if (NoteGap) {
-    if (ElapsedUs >= NoteTimeLeft) {
-      NoteTimeLeft = 0;
-      NoteGap = FALSE;
-    } else {
-      NoteTimeLeft -= ElapsedUs;
-      return;
-    }
+  if (Muted) return;
+
+  if (NoteTimeLeft > ElapsedUs) {
+    NoteTimeLeft -= ElapsedUs;
+    return;
   }
 
-  if (NoteTimeLeft == 0) {
-    // Advance to next note
-    if (MELODY[MelodyPos][1] == 0) MelodyPos = 0;
-    if (MELODY[MelodyPos][0] == R) {
-      SpeakerOff();
-    } else {
-      SpeakerOn(MELODY[MelodyPos][0]);
-    }
-    NoteTimeLeft = MELODY[MelodyPos][1] * 1000; // ms to us
-    MelodyPos++;
-    if (MelodyPos >= MELODY_COUNT) MelodyPos = 0;
+  // Current note done, move to next
+  if (MELODY[MelodyPos][1] == 0) MelodyPos = 0;
+  if (MELODY[MelodyPos][0] == R) {
+    SpeakerOff();
   } else {
-    if (ElapsedUs >= NoteTimeLeft) {
-      SpeakerOff();
-      NoteTimeLeft = 0;
-      NoteGap = TRUE;
-      NoteTimeLeft = NOTE_GAP_US;
-    } else {
-      NoteTimeLeft -= ElapsedUs;
-    }
+    SpeakerOn(MELODY[MelodyPos][0]);
   }
+  NoteTimeLeft = MELODY[MelodyPos][1] * 1000;
+  MelodyPos++;
+  if (MelodyPos >= MELODY_COUNT) MelodyPos = 0;
 }
 
 static BOOLEAN ReadKey(EFI_INPUT_KEY *Key) {
@@ -579,7 +575,6 @@ UefiMain(
   restart:
   MelodyPos = 0;
   NoteTimeLeft = 0;
-  NoteGap = FALSE;
   SpeakerOff();
   ClearBoard();
   NextType   = (INT32)Rand7();
@@ -647,16 +642,32 @@ UefiMain(
       UiDirty = FALSE;
     }
 
-    // Fixed 10ms slices - music and input independent of game speed
+    // TSC-based real timing - accurate on all x86 hardware
     {
-      UINT32 SliceUs = 10000;
-      UINT32 Total   = 20000; // always 20ms per frame regardless of TickRate
-      UINT32 Done    = 0;
+      UINT64 TscHz = 0;
+      UINT64 T0, T1, TscDelta;
+      UINT32 ElapsedUs;
+      UINT32 Total = TickRate / 20;
+      UINT32 Done  = 0;
+      // Calibrate TSC: measure ticks in 10ms stall
+      if (TscHz == 0) {
+        T0 = AsmReadTsc();
+        gBS->Stall(10000);
+        T1 = AsmReadTsc();
+        TscHz = (T1 - T0) * 100; // ticks per second
+        if (TscHz == 0) TscHz = 1000000000ULL; // fallback 1GHz
+      }
+      T0 = AsmReadTsc();
       while (Done < Total) {
-        UINT32 Step = (Done + SliceUs > Total) ? (Total - Done) : SliceUs;
-        gBS->Stall(Step);
-        TickMusic(Step);
-        // Poll input mid-frame so it never feels laggy
+        gBS->Stall(1000);
+        T1 = AsmReadTsc();
+        TscDelta = T1 - T0;
+        ElapsedUs = (UINT32)(TscDelta * 1000000 / TscHz);
+        if (ElapsedUs == 0) ElapsedUs = 1000;
+        T0 = T1;
+        TickMusic(ElapsedUs);
+        Done += ElapsedUs;
+        // Poll input
         while (ReadKey(&Key)) {
           if (Key.ScanCode == SCAN_LEFT ||
             Key.UnicodeChar == L'a' || Key.UnicodeChar == L'A') {
@@ -689,7 +700,6 @@ UefiMain(
                   RenderFrame();
                   if (UiDirty) { RenderUI(); UiDirty = FALSE; }
         }
-        Done += Step;
       }
     }
 
