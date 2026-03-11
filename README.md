@@ -134,7 +134,7 @@ Output: `Build\OvmfX64\DEBUG_VS2019\X64\TetrisinUEFI.efi`
 
 Copy `TetrisinUEFI.efi` to a FAT32 USB drive and boot it from your UEFI firmware shell.
 
-**Ventoy** — rename the file to `BOOTX64.EFI` and place it in the root of the Ventoy partition. It will appear in the boot menu automatically.
+**Ventoy** — Put the .iso file to the Ventoy drive and boot it from Ventoy!
 
 **Direct boot** — place the file at:
 
